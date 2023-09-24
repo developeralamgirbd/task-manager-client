@@ -1,0 +1,47 @@
+name: React CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.15.0'
+
+      - name: Install npm dependencies
+        run: npm install
+
+      # Add production environment variables here
+      - name: Set Production Environment Variables
+        run: |
+          echo "PRODUCTION=true" >> $GITHUB_ENV
+          echo ${{ secrets.VITE_API_URL }} >> $GITHUB_ENV
+          echo ${{ secrets.VITE_API_BASE_URL }} >> $GITHUB_ENV
+          echo ${{ secrets.VITE_APP_NAME }} >> $GITHUB_ENV
+          echo ${{ secrets.VITE_APP_ENV }} >> $GITHUB_ENV
+          # Add other production variables as needed
+
+      - name: Run build task
+        run: npm run build --if-present
+
+      - name: Deploy to Server
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSHKEY }}
+          ARGS: "-rlgoDzvc -i --delete"
+          SOURCE: "build/"
+          REMOTE_HOST: ${{ secrets.HOST }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          REMOTE_PORT: ${{ secrets.PORT }}
+          TARGET: ${{ secrets.TARGET_PATH }}
+          EXCLUDE: "/build/, /node_modules/"
